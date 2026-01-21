@@ -15,8 +15,9 @@
             --accent: #38bdf8;
             --border: #1e293b;
             --drawer-width: 380px;
-            --month-label-width: 100px;
-            --event-height: 24px;
+            --month-label-width: 64px;
+            --event-height: 20px;
+            --bg-empty: #363637;
         }
 
         * {
@@ -133,12 +134,12 @@
 
         .header-cell {
             flex: 1;
-            height: 40px; /* Aumentado para acomodar o texto */
+            height: 24px; /* Aumentado para acomodar o texto */
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 12px;
             color: var(--text-dim);
             border-right: 1px solid #ffffff05;
             text-transform: uppercase;
@@ -164,13 +165,16 @@
         .month-row {
             display: flex;
             position: relative;
-            border-bottom: 1px solid var(--border);
-            min-height: 80px;
+            /* border-bottom: 1px solid var(--border); */
+            /* box-shadow: 0 0 1px 0 var(--border); */
+            /* box-shadow: 0 0 1px 0 white; */
+            min-height: 56px;
             /* Aumentado para caber o dia */
             width: 100%;
         }
-
+        
         .month-name {
+            box-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.5);
             width: var(--month-label-width);
             min-width: var(--month-label-width);
             background: var(--bg-deep);
@@ -189,25 +193,35 @@
             display: flex;
             flex: 1;
             position: relative;
+            /* box-shadow: inset 0 0 1px white; */
         }
 
         .cell {
             flex: 1;
-            border-right: 1px solid #1e293b44;
+            /* border-right: 1px solid #1e293b44; */
+            /* box-shadow: inset 0 0 1px rgba(0, 0, 0, 1); */
+
             height: 100%;
-            min-height: 80px;
+            min-height: 56px;
             position: relative;
             z-index: 1;
             cursor: pointer;
+            box-shadow: inset 0.5px 0.5px 0.5px 0.5px rgba(255, 255, 255, 0.1);
             /* Indicar clique */
+            background: #493e7185;
         }
 
         .cell.weekend {
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.6);
         }
 
         .cell:hover {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(255, 255, 255, 0.5);
+            box-shadow: inset 0 0 1px rgba(255, 0, 0, 1);
+        }
+
+        .cell:hover .cell-label strong {
+            color: rgba(255, 255, 255, 1);
         }
 
         /* Novo: Label do dia dentro da célula */
@@ -233,7 +247,7 @@
             position: absolute;
             height: var(--event-height);
             border-radius: 4px;
-            font-size: 11px;
+            font-size: 12px;
             padding: 0 8px;
             display: flex;
             align-items: center;
@@ -443,6 +457,10 @@
         body.is-dragging .event-ghost {
             display: block;
         }
+
+        .empty {
+            background-color: rgb(15, 23, 42);
+        }
     </style>
 </head>
 
@@ -450,16 +468,21 @@
 
     <div id="backdrop" onclick="ui.closeDrawer()"></div>
 
-    <header>
+    <!-- <header>
         <h2 style="font-size: 18px;">AnuCal <span style="color:var(--text-dim)">2026</span></h2>
-        <button class="btn btn-primary" onclick="ui.openDrawer('event')">+ Novo Evento</button>
-    </header>
+    </header> -->
 
     <div id="toolbar">
         <div id="category-wrapper">
             <div id="category-pills"></div>
             <button class="btn-icon" title="Gerenciar Categorias" onclick="ui.openDrawer('category')">⚙️</button>
         </div>
+        
+        <header>
+            <h1 style="font-size: 18px;">AnuCal <span style="color:var(--text-dim)">2026</span></h1>
+        </header>
+
+        <button class="btn btn-primary" onclick="ui.openDrawer('event')">+ Novo Evento</button>
     </div>
 
     <div id="calendar-viewport">
@@ -872,7 +895,7 @@
                     if (targetRow && state.drag.type === 'move') {
                         const daysRow = targetRow.querySelector('.days-row');
                         const rect = daysRow.getBoundingClientRect();
-                        const relativeY = e.clientY - rect.top - 35; // 35 é o offset do topo (dia da célula)
+                        const relativeY = e.clientY - rect.top - 24; // 24 é o offset do topo (dia da célula)
                         const targetSlot = Math.max(0, Math.floor(relativeY / 28)); // 28 é a altura de cada slot
 
                         // Reordenar o array state.events
@@ -947,7 +970,7 @@
                 header.innerHTML = hHtml;
 
                 const body = document.getElementById('grid-body');
-                const months = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+                const months = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 
                 body.innerHTML = months.map((m, idx) => {
                     let cellsHtml = '';
@@ -958,7 +981,7 @@
                     // Renderizar até 37 colunas para caber o offset + 31 dias
                     for (let col = 0; col < 37; col++) {
                         if (col < firstWeekday || dayCounter > daysInMonth) {
-                            cellsHtml += `<div class="cell" style="background:var(--bg-deep); border:none; cursor:default;"></div>`;
+                            cellsHtml += `<div class="cell empty" style="border:none; cursor:default;"></div>`;
                         } else {
                             const dateObj = new Date(state.year, idx, dayCounter);
                             const isWk = D.isWeekend(state.year, idx, dayCounter);
@@ -1006,7 +1029,7 @@
             renderEvents() {
                 // Limpar visual antigo
                 document.querySelectorAll('.event-bar').forEach(e => e.remove());
-                document.querySelectorAll('.month-row').forEach(r => r.style.height = '80px'); // Reset altura mínima
+                document.querySelectorAll('.month-row').forEach(r => r.style.height = '56px'); // Reset altura mínima
 
                 const activeCatIds = state.categories.filter(c => c.active).map(c => c.id);
 
@@ -1084,7 +1107,7 @@
                         bar.style.left = `calc(${visualStartCol * unit}% + 2px)`;
                         bar.style.width = `calc(${duration * unit}% - 4px)`;
 
-                        bar.style.top = `${(slotIndex * 28) + 35}px`; // Offset aumentado por causa do dia na célula
+                        bar.style.top = `${(slotIndex * 28) + 24}px`; // Offset aumentado por causa do dia na célula
 
                         // Handles (somente para eventos originais ou lógica mais complexa)
                         if (!ev.isRecurringInstance) {
