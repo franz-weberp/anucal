@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnuCal 2026 - Advanced</title>
+    <style>
+        :root {
+            --bg-deep: #0b1120;
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-dim: #64748b;
+            --accent: #38bdf8;
+            --border: #1e293b;
+            --drawer-width: 380px;
+            --month-label-width: 100px;
+            --event-height: 24px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background: var(--bg-main);
+            color: var(--text-main);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* --- LAYOUT --- */
+        header {
+            padding: 12px 24px;
+            background: var(--bg-deep);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            z-index: 20;
+        }
+
+        #toolbar {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 10px 24px;
+            background: var(--bg-main);
+            border-bottom: 1px solid var(--border);
+        }
+
+        #category-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        #category-pills {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: var(--bg-card);
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: 0.2s;
+            user-select: none;
+        }
+
+        .pill.active {
+            border-color: var(--accent);
+            background: rgba(56, 189, 248, 0.1);
+        }
+
+        .pill .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .btn-icon {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-icon:hover {
+            color: white;
+            border-color: white;
+        }
+
+        /* --- CALENDAR GRID --- */
+        #calendar-viewport {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+            width: 100%;
+        }
+
+        .grid-header {
+            display: flex;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--bg-deep);
+            border-bottom: 1px solid var(--border);
+            padding-left: var(--month-label-width);
+        }
+
+        .header-cell {
+            flex: 1;
+            height: 40px; /* Aumentado para acomodar o texto */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: var(--text-dim);
+            border-right: 1px solid #ffffff05;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* Círculo de destaque para o dia atual */
+        .cell-label.today {
+            background: #ef4444;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+
+        .cell-label.today strong {
+            color: white !important;
+        }
+
+        .month-row {
+            display: flex;
+            position: relative;
+            border-bottom: 1px solid var(--border);
+            min-height: 80px;
+            /* Aumentado para caber o dia */
+            width: 100%;
+        }
+
+        .month-name {
+            width: var(--month-label-width);
+            min-width: var(--month-label-width);
+            background: var(--bg-deep);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-dim);
+            border-right: 1px solid var(--border);
+            z-index: 10;
+            user-select: none;
+        }
+
+        .days-row {
+            display: flex;
+            flex: 1;
+            position: relative;
+        }
+
+        .cell {
+            flex: 1;
+            border-right: 1px solid #1e293b44;
+            height: 100%;
+            min-height: 80px;
+            position: relative;
+            z-index: 1;
+            cursor: pointer;
+            /* Indicar clique */
+        }
+
+        .cell.weekend {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .cell:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Novo: Label do dia dentro da célula */
+        .cell-label {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            font-size: 10px;
+            color: var(--text-dim);
+            pointer-events: none;
+            /* Deixar clique passar para a célula */
+            line-height: 1;
+        }
+
+        .cell-label strong {
+            display: block;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        /* --- EVENTS --- */
+        .event-bar {
+            position: absolute;
+            height: var(--event-height);
+            border-radius: 4px;
+            font-size: 11px;
+            padding: 0 8px;
+            display: flex;
+            align-items: center;
+            color: white;
+            cursor: pointer;
+            z-index: 5;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            user-select: none;
+            transition: opacity 0.1s;
+        }
+
+        /* Indicador de Repetição */
+        .event-bar.is-recurring::after {
+            content: '↻';
+            position: absolute;
+            right: 4px;
+            font-size: 10px;
+            opacity: 0.7;
+        }
+
+        .event-bar:hover {
+            z-index: 50;
+            filter: brightness(1.1);
+        }
+
+        .event-bar.dragging {
+            opacity: 0.8;
+            cursor: grabbing;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .handle {
+            position: absolute;
+            top: 0;
+            width: 10px;
+            height: 100%;
+            cursor: col-resize;
+            background: rgba(255, 255, 255, 0.0);
+            z-index: 10;
+        }
+
+        .handle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .handle-l {
+            left: 0;
+            border-radius: 4px 0 0 4px;
+        }
+
+        .handle-r {
+            right: 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* --- DRAWER --- */
+        #drawer {
+            position: fixed;
+            right: -400px;
+            top: 0;
+            width: var(--drawer-width);
+            height: 100%;
+            background: var(--bg-card);
+            z-index: 2000;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+            border-left: 1px solid var(--border);
+            overflow-y: auto;
+        }
+
+        #drawer.open {
+            right: 0;
+        }
+
+        .drawer-section {
+            display: none;
+        }
+
+        .drawer-section.active {
+            display: block;
+        }
+
+        /* Forms */
+        label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+            margin-top: 10px;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            color: white;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        input[type="color"] {
+            height: 40px;
+            padding: 2px;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 13px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-deep);
+        }
+
+        .btn-primary:hover {
+            background: #0ea5e9;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+        }
+
+        .btn-ghost:hover {
+            color: white;
+            border-color: white;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        /* Category List in Drawer */
+        .cat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: var(--bg-main);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        /* Backdrop */
+        #backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1999;
+            display: none;
+        }
+
+        #backdrop.visible {
+            display: block;
+        }
+
+        /* --- GHOST BAR --- */
+        .event-ghost {
+            position: absolute;
+            height: var(--event-height);
+            background: rgba(255, 255, 255, 0.1); /* Cor sutil */
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            z-index: 2; /* Fica atrás da barra real que está sendo arrastada */
+            pointer-events: none; /* Crucial para não travar o mouse */
+            display: none; /* Escondido por padrão */
+            transition: top 0.1s ease, left 0.1s ease, width 0.1s ease;
+        }
+
+        /* Mostra apenas quando o drag está ativo */
+        body.is-dragging .event-ghost {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="backdrop" onclick="ui.closeDrawer()"></div>
+
+    <header>
+        <h2 style="font-size: 18px;">AnuCal <span style="color:var(--text-dim)">2026</span></h2>
+        <button class="btn btn-primary" onclick="ui.openDrawer('event')">+ Novo Evento</button>
+    </header>
+
+    <div id="toolbar">
+        <div id="category-wrapper">
+            <div id="category-pills"></div>
+            <button class="btn-icon" title="Gerenciar Categorias" onclick="ui.openDrawer('category')">⚙️</button>
+        </div>
+    </div>
+
+    <div id="calendar-viewport">
+        <div class="grid-header" id="grid-header"></div>
+        <div id="grid-body"></div>
+        <div id="ghost-bar" class="event-ghost"></div>
+    </div>
+
+    <div id="drawer">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 id="drawer-title" style="font-size:18px">Editor</h3>
+            <button onclick="ui.closeDrawer()" class="btn-ghost"
+                style="border:none; font-size:20px; padding:4px;">&times;</button>
+        </div>
+
+        <div id="drawer-content-event" class="drawer-section">
+            <input type="hidden" id="f-id">
+            <label>Título</label>
+            <input type="text" id="f-title" placeholder="Reunião, Viagem, etc.">
+
+            <label>Categoria</label>
+            <select id="f-cat"></select>
+
+            <label>Repetição</label>
+            <select id="f-recurrence">
+                <option value="none">Não repetir</option>
+                <option value="weekly">Semanalmente (toda semana)</option>
+                <option value="monthly">Mensalmente (mesmo dia)</option>
+            </select>
+            <small style="color:var(--text-dim); font-size:11px;">Repetições são geradas apenas para este ano.</small>
+
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1">
+                    <label>Início</label>
+                    <input type="date" id="f-start">
+                </div>
+                <div style="flex:1">
+                    <label>Fim</label>
+                    <input type="date" id="f-end">
+                </div>
+            </div>
+
+            <label>Notas</label>
+            <textarea id="f-desc" rows="4"></textarea>
+
+            <div style="margin-top:24px; display:flex; flex-direction:column; gap:10px">
+                <button class="btn btn-primary" onclick="app.saveEvent()">Salvar Evento</button>
+                <button id="btn-delete" class="btn btn-danger" onclick="app.deleteEvent()">Excluir Evento</button>
+            </div>
+        </div>
+
+        <div id="drawer-content-category" class="drawer-section">
+            <h4 style="margin-bottom:15px; color:var(--text-dim)">Categorias Existentes</h4>
+            <div id="cat-list-editor"></div>
+
+            <hr style="border:0; border-top:1px solid var(--border); margin: 20px 0;">
+
+            <h4 style="margin-bottom:10px; color:white">Nova Categoria</h4>
+            <label>Nome</label>
+            <input type="text" id="cat-new-name" placeholder="Ex: Financeiro">
+            <label>Cor</label>
+            <input type="color" id="cat-new-color" value="#38bdf8" style="height:40px; width:100%">
+
+            <button class="btn btn-primary" style="margin-top:15px; width:100%" onclick="app.addCategory()">Adicionar
+                Categoria</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. STATE & DATA ---
+        const state = {
+            year: 2026,
+            categories: [
+                { id: 'c1', name: 'Trabalho', color: '#3b82f6', active: true },
+                { id: 'c2', name: 'Pessoal', color: '#10b981', active: true },
+                { id: 'c3', name: 'Urgente', color: '#ef4444', active: true }
+            ],
+            events: [
+                {
+                    id: 'e1',
+                    title: 'Projeto Q1',
+                    catId: 'c1',
+                    start: '2026-01-15',
+                    end: '2026-01-20',
+                    recurrence: 'none',
+                    description: 'Fase inicial',
+                    z: 0
+                },
+                {
+                    id: 'e2',
+                    title: 'Academia',
+                    catId: 'c2',
+                    start: '2026-01-05',
+                    end: '2026-01-05',
+                    recurrence: 'weekly', // Teste de repetição
+                    description: 'Treino de perna',
+                    z: 1
+                }
+            ],
+            drag: {
+                active: false,
+                eventId: null,
+                type: null,
+                startX: 0,
+                startY: 0,
+                moved: false,
+                origStart: null,
+                origEnd: null
+            }
+
+        };
+
+        // --- 2. DATE HELPERS ---
+        const D = {
+            parse: (s) => {
+                const [y, m, d] = s.split('-').map(Number);
+                return new Date(y, m - 1, d);
+            },
+            format: (d) => {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            },
+            diffDays: (d1, d2) => Math.round((d2 - d1) / (1000 * 60 * 60 * 24)),
+            addDays: (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n),
+            daysInMonth: (y, m) => new Date(y, m + 1, 0).getDate(),
+            getWeekdayShort: (d) => {
+                const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                return days[d.getDay()];
+            },
+            isWeekend: (y, m, d) => {
+                const day = new Date(y, m, d).getDay();
+                return day === 0 || day === 6;
+            }
+        };
+
+        // --- 3. GEOMETRY & GRID ---
+        const Grid = {
+            getDateFromPoint(x, y) {
+                const rows = document.querySelectorAll('.month-row');
+
+                for (let row of rows) {
+                    const rect = row.getBoundingClientRect();
+                    if (y < rect.top || y > rect.bottom) continue;
+
+                    const monthIdx = parseInt(row.dataset.month);
+                    const daysRow = row.querySelector('.days-row');
+                    const r = daysRow.getBoundingClientRect();
+
+                    const cellWidth = r.width / 37;
+                    const col = Math.floor((x - r.left) / cellWidth);
+
+                    if (col < 0 || col >= 37) return null;
+
+                    const firstWeekday =
+                        (new Date(state.year, monthIdx, 1).getDay() + 6) % 7;
+
+                    const day = col - firstWeekday + 1;
+                    const maxDays = D.daysInMonth(state.year, monthIdx);
+
+                    if (day < 1 || day > maxDays) return null;
+
+                    return new Date(state.year, monthIdx, day);
+                }
+                return null;
+            }
+
+        };
+
+        // --- 4. APP LOGIC ---
+        const app = {
+            init() {
+                ui.renderStructure();
+                ui.renderData();
+                this.setupDragDrop();
+            },
+
+            // --- Categories ---
+            addCategory() {
+                const name = document.getElementById('cat-new-name').value;
+                const color = document.getElementById('cat-new-color').value;
+                if (!name) return alert("Nome necessário");
+
+                state.categories.push({
+                    id: 'c-' + Date.now(),
+                    name, color, active: true
+                });
+                document.getElementById('cat-new-name').value = '';
+
+                ui.renderCategoryEditorList(); // Atualizar lista no editor
+                ui.renderPills(); // Atualizar toolbar
+                ui.renderEvents(); // Atualizar cores eventos
+            },
+
+            deleteCategory(id) {
+                if (confirm("Tem certeza? Eventos desta categoria perderão a cor.")) {
+                    state.categories = state.categories.filter(c => c.id !== id);
+                    ui.renderCategoryEditorList();
+                    ui.renderPills();
+                    ui.renderEvents();
+                }
+            },
+
+            toggleCategory(id) {
+                const cat = state.categories.find(c => c.id === id);
+                if (cat) cat.active = !cat.active;
+                ui.renderData();
+            },
+
+            // --- Events ---
+            saveEvent() {
+                const id = document.getElementById('f-id').value;
+                const title = document.getElementById('f-title').value;
+                const start = document.getElementById('f-start').value;
+                const end = document.getElementById('f-end').value;
+                const catId = document.getElementById('f-cat').value;
+                const recurrence = document.getElementById('f-recurrence').value;
+                const desc = document.getElementById('f-desc').value;
+
+                if (!title || !start || !end) return alert("Título e Datas são obrigatórios");
+                if (new Date(start) > new Date(end)) return alert("Data final deve ser maior que inicial");
+
+                // Se o ID contiver "_rep_", significa que estamos editando uma ocorrência
+                // Para simplificar este demo, se editar uma ocorrência, cria um novo evento separado
+                let saveId = id;
+                if (id && id.includes('_rep_')) {
+                    saveId = ''; // Força criação de novo evento
+                }
+
+                if (saveId) {
+                    const ev = state.events.find(e => e.id === saveId);
+                    Object.assign(ev, { title, start, end, catId, recurrence, description: desc });
+                } else {
+                    state.events.push({
+                        id: 'evt-' + Date.now(),
+                        title, start, end, catId, recurrence, description: desc
+                    });
+                }
+                ui.closeDrawer();
+                ui.renderData();
+            },
+
+            deleteEvent() {
+                const id = document.getElementById('f-id').value;
+                if (!id) return;
+
+                // Se for repetição, deletar (neste demo simples) não faz nada no pai
+                // Em app real, perguntaria "Deletar série ou ocorrência?"
+                if (id.includes('_rep_')) {
+                    alert("Você não pode deletar uma única ocorrência neste demo. Edite o evento original.");
+                    return;
+                }
+
+                state.events = state.events.filter(e => e.id !== id);
+                ui.closeDrawer();
+                ui.renderData();
+            },
+
+            handleCellClick(dateStr) {
+                // Abre modal de criação com data pré-selecionada
+                ui.openDrawer('event');
+                document.getElementById('f-start').value = dateStr;
+                document.getElementById('f-end').value = dateStr;
+                document.getElementById('drawer-title').innerText = 'Novo Evento';
+            },
+
+            // --- Recurrence Logic (Expansion) ---
+            expandEvents(events) {
+                let expanded = [];
+                const yearEnd = new Date(state.year, 11, 31);
+
+                events.forEach(ev => {
+                    // Adiciona o original
+                    expanded.push(ev);
+
+                    if (ev.recurrence === 'none') return;
+
+                    const startObj = D.parse(ev.start);
+                    const endObj = D.parse(ev.end);
+                    const duration = D.diffDays(startObj, endObj);
+
+                    let currStart = new Date(startObj);
+
+                    // Loop para gerar ocorrências até o fim do ano
+                    while (true) {
+                        if (ev.recurrence === 'weekly') {
+                            currStart.setDate(currStart.getDate() + 7);
+                        } else if (ev.recurrence === 'monthly') {
+                            currStart.setMonth(currStart.getMonth() + 1);
+                        }
+
+                        if (currStart > yearEnd) break;
+
+                        // Criar clone virtual
+                        const newEnd = D.addDays(currStart, duration);
+
+                        expanded.push({
+                            ...ev,
+                            id: ev.id + '_rep_' + currStart.getTime(), // ID Virtual único
+                            start: D.format(currStart),
+                            end: D.format(newEnd),
+                            isRecurringInstance: true
+                        });
+                    }
+                });
+                return expanded;
+            },
+
+            // --- Drag System ---
+            setupDragDrop() {
+                window.addEventListener('mousedown', e => {
+                    const el = e.target;
+                    if (el.classList.contains('handle') || el.closest('.event-bar')) {
+                        const bar = el.closest('.event-bar');
+                        const eventId = bar.dataset.id;
+
+                        // Bloquear arrastar ocorrências virtuais para simplificar
+                        if (eventId.includes('_rep_')) return;
+
+                        const ev = state.events.find(e => e.id === eventId);
+                        if (!ev) return;
+
+                        state.drag.active = true;
+                        state.drag.eventId = eventId;
+                        state.drag.startX = e.clientX;
+                        state.drag.startY = e.clientY;
+                        state.drag.moved = false;
+
+                        state.drag.origStart = D.parse(ev.start);
+                        state.drag.origEnd = D.parse(ev.end);
+
+                        state.drag.type = el.classList.contains('handle-l') ? 'resize-l' :
+                            el.classList.contains('handle-r') ? 'resize-r' : 'move';
+
+                        document.body.style.cursor = state.drag.type === 'move' ? 'grabbing' : 'ew-resize';
+                        document.querySelectorAll(`.event-bar[data-id="${eventId}"]`).forEach(b => b.classList.add('dragging'));
+                    }
+                });
+
+                // window.addEventListener('mousemove', e => {
+                //     if (
+                //         Math.abs(e.clientX - state.drag.startX) > 3 ||
+                //         Math.abs(e.clientY - state.drag.startY) > 3
+                //     ) {
+                //         state.drag.moved = true;
+                //     }
+
+
+                //     if (!state.drag.active) return;
+                //     e.preventDefault();
+                //     const currentMouseDate = Grid.getDateFromPoint(e.clientX, e.clientY);
+                //     if (!currentMouseDate) return;
+
+                //     const ev = state.events.find(e => e.id === state.drag.eventId);
+
+                //     if (state.drag.type === 'move') {
+                //         const duration = D.diffDays(state.drag.origStart, state.drag.origEnd);
+                //         let newStart = currentMouseDate;
+                //         const newEnd = D.addDays(newStart, duration);
+                //         ev.start = D.format(newStart);
+                //         ev.end = D.format(newEnd);
+                //     } else if (state.drag.type === 'resize-l') {
+                //         if (currentMouseDate <= state.drag.origEnd) ev.start = D.format(currentMouseDate);
+                //     } else if (state.drag.type === 'resize-r') {
+                //         if (currentMouseDate >= state.drag.origStart) ev.end = D.format(currentMouseDate);
+                //     }
+
+                //     requestAnimationFrame(() => ui.renderEvents());
+                // });
+                window.addEventListener('mousemove', e => {
+                    if (Math.abs(e.clientX - state.drag.startX) > 3 || Math.abs(e.clientY - state.drag.startY) > 3) {
+                        state.drag.moved = true;
+                    }
+
+                    if (!state.drag.active) return;
+                    e.preventDefault();
+
+                    const currentMouseDate = Grid.getDateFromPoint(e.clientX, e.clientY);
+                    const ev = state.events.find(e => e.id === state.drag.eventId);
+                    if (!ev) return;
+
+                    // --- 1. Movimentação Horizontal (Data) ---
+                    if (currentMouseDate) {
+                        if (state.drag.type === 'move') {
+                            const duration = D.diffDays(state.drag.origStart, state.drag.origEnd);
+                            let newStart = currentMouseDate;
+                            const newEnd = D.addDays(newStart, duration);
+                            ev.start = D.format(newStart);
+                            ev.end = D.format(newEnd);
+                        } else if (state.drag.type === 'resize-l') {
+                            if (currentMouseDate <= D.parse(ev.end)) ev.start = D.format(currentMouseDate);
+                        } else if (state.drag.type === 'resize-r') {
+                            if (currentMouseDate >= D.parse(ev.start)) ev.end = D.format(currentMouseDate);
+                        }
+                    }
+
+                    // --- 2. Reordenação Vertical (Slots) ---
+                    // Identificamos em qual mês o mouse está para saber a altura base
+                    const rows = document.querySelectorAll('.month-row');
+                    let targetRow = null;
+                    for (let row of rows) {
+                        const rect = row.getBoundingClientRect();
+                        if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                            targetRow = row;
+                            break;
+                        }
+                    }
+
+                    if (targetRow && state.drag.type === 'move') {
+                        const daysRow = targetRow.querySelector('.days-row');
+                        const rect = daysRow.getBoundingClientRect();
+                        const relativeY = e.clientY - rect.top - 35; // 35 é o offset do topo (dia da célula)
+                        const targetSlot = Math.max(0, Math.floor(relativeY / 28)); // 28 é a altura de cada slot
+
+                        // Reordenar o array state.events
+                        const currentIndex = state.events.findIndex(item => item.id === ev.id);
+
+                        // Esta lógica "puxa" o evento para cima ou para baixo no array
+                        // comparando o slot alvo com a ordem atual
+                        if (currentIndex !== -1) {
+                            state.events.splice(currentIndex, 1);
+                            // Inserimos em uma posição baseada no targetSlot
+                            // Para subir (ficar em cima), ele deve vir primeiro no array
+                            state.events.splice(targetSlot, 0, ev);
+                        }
+                    }
+
+                    requestAnimationFrame(() => ui.renderEvents());
+                });
+
+                // window.addEventListener('mouseup', () => {
+                //     if (state.drag.active && !state.drag.moved) {
+                //         ui.openDrawer('event', state.drag.eventId);
+                //     }
+
+                //     if (state.drag.active) {
+                //         // --- INÍCIO DA ALTERAÇÃO MINIMALISTA ---
+                //         // Move o evento arrastado para o topo do array para ele ganhar prioridade visual
+                //         const idx = state.events.findIndex(e => e.id === state.drag.eventId);
+                //         if (idx > -1) {
+                //             const [movedEvent] = state.events.splice(idx, 1);
+                //             state.events.unshift(movedEvent);
+                //         }
+                //         // --- FIM DA ALTERAÇÃO ---
+
+                //         state.drag.active = false;
+                //         document.body.style.cursor = 'default';
+                //         ui.renderEvents();
+                //     }
+                // });
+                window.addEventListener('mouseup', () => {
+                    if (state.drag.active && !state.drag.moved) {
+                        ui.openDrawer('event', state.drag.eventId);
+                    }
+
+                    if (state.drag.active) {
+                        // --- REMOVIDO: O unshift que forçava o evento para o topo ---
+                        // A lógica de reordenação agora acontece em tempo real no mousemove
+                        // e permanece no array state.events conforme você move.
+
+                        state.drag.active = false;
+                        document.body.style.cursor = 'default';
+
+                        // Remove a classe de arraste visual
+                        document.querySelectorAll('.event-bar').forEach(b => b.classList.remove('dragging'));
+
+                        ui.renderEvents();
+                    }
+                });
+            }
+        };
+
+        // --- 5. UI RENDERER ---
+        const ui = {
+            renderStructure() {
+                const header = document.getElementById('grid-header');
+                const week = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+
+                // Aumentar para 37 colunas no cabeçalho
+                let hHtml = '';
+                for (let i = 0; i < 37; i++) {
+                    hHtml += `<div class="header-cell">${week[i % 7]}</div>`;
+                }
+                header.innerHTML = hHtml;
+
+                const body = document.getElementById('grid-body');
+                const months = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+
+                body.innerHTML = months.map((m, idx) => {
+                    let cellsHtml = '';
+                    const daysInMonth = D.daysInMonth(state.year, idx);
+                    const firstWeekday = (new Date(state.year, idx, 1).getDay() + 6) % 7;
+                    let dayCounter = 1;
+
+                    // Renderizar até 37 colunas para caber o offset + 31 dias
+                    for (let col = 0; col < 37; col++) {
+                        if (col < firstWeekday || dayCounter > daysInMonth) {
+                            cellsHtml += `<div class="cell" style="background:var(--bg-deep); border:none; cursor:default;"></div>`;
+                        } else {
+                            const dateObj = new Date(state.year, idx, dayCounter);
+                            const isWk = D.isWeekend(state.year, idx, dayCounter);
+                            const dateStr = D.format(dateObj);
+                            const isToday = new Date().toDateString() === dateObj.toDateString();
+
+                            cellsHtml += `
+                    <div class="cell ${isWk ? 'weekend' : ''}" onclick="app.handleCellClick('${dateStr}')">
+                        <div class="cell-label ${isToday ? 'today' : ''}">
+                            <strong>${dayCounter}</strong>
+                        </div>
+                    </div>`;
+                            dayCounter++;
+                        }
+                    }
+                    return `<div class="month-row" data-month="${idx}"><div class="month-name">${m}</div><div class="days-row">${cellsHtml}</div></div>`;
+                }).join('');
+            },
+
+            renderData() {
+                this.renderPills();
+                this.renderEvents();
+            },
+
+            renderPills() {
+                const c = document.getElementById('category-pills');
+                c.innerHTML = state.categories.map(cat => `
+                    <div class="pill ${cat.active ? 'active' : ''}" onclick="app.toggleCategory('${cat.id}')">
+                        <span class="dot" style="background:${cat.color}"></span> ${cat.name}
+                    </div>
+                `).join('');
+            },
+
+            renderCategoryEditorList() {
+                const list = document.getElementById('cat-list-editor');
+                list.innerHTML = state.categories.map(c => `
+                    <div class="cat-item">
+                        <div style="width:16px; height:16px; border-radius:50%; background:${c.color}"></div>
+                        <span style="flex:1; font-size:13px">${c.name}</span>
+                        <button class="btn-ghost" style="padding:2px 6px; font-size:10px" onclick="app.deleteCategory('${c.id}')">Excluir</button>
+                    </div>
+                `).join('');
+            },
+
+            renderEvents() {
+                // Limpar visual antigo
+                document.querySelectorAll('.event-bar').forEach(e => e.remove());
+                document.querySelectorAll('.month-row').forEach(r => r.style.height = '80px'); // Reset altura mínima
+
+                const activeCatIds = state.categories.filter(c => c.active).map(c => c.id);
+
+                // 1. Expandir eventos recorrentes (Virtualização)
+                const expandedEvents = app.expandEvents(state.events);
+
+                // 2. Filtrar categorias ativas
+                const visibleEvents = expandedEvents.filter(e => activeCatIds.includes(e.catId));
+
+                // Processar cada mês
+                for (let m = 0; m < 12; m++) {
+                    const monthStart = new Date(state.year, m, 1);
+                    const monthEnd = new Date(state.year, m, D.daysInMonth(state.year, m));
+
+                    const monthEvents = visibleEvents.filter(ev => {
+                        const s = D.parse(ev.start);
+                        const e = D.parse(ev.end);
+                        return s <= monthEnd && e >= monthStart;
+                    });
+
+                    if (monthEvents.length === 0) continue;
+
+                    // Stacking Logic
+                    // monthEvents.sort((a, b) => D.parse(a.start) - D.parse(b.start));
+                    const slots = [];
+
+                    const rowEl = document.querySelector(`.month-row[data-month="${m}"]`);
+                    const container = rowEl.querySelector('.days-row');
+
+                    monthEvents.forEach(ev => {
+                        const globalStart = D.parse(ev.start);
+                        const globalEnd = D.parse(ev.end);
+                        const visualStart = globalStart < monthStart ? monthStart : globalStart;
+                        const visualEnd = globalEnd > monthEnd ? monthEnd : globalEnd;
+
+                        const startDay = visualStart.getDate();
+                        const endDay = visualEnd.getDate();
+                        const duration = endDay - startDay + 1;
+
+                        let slotIndex = 0;
+                        while (true) {
+                            if (!slots[slotIndex] || startDay > slots[slotIndex]) {
+                                slots[slotIndex] = endDay;
+                                break;
+                            }
+                            slotIndex++;
+                        }
+
+                        // Render Bar
+                        const bar = document.createElement('div');
+                        bar.className = 'event-bar';
+                        if (ev.isRecurringInstance) bar.classList.add('is-recurring');
+                        if (state.drag.active && state.drag.eventId === ev.id) bar.classList.add('dragging');
+
+                        bar.dataset.id = ev.id;
+                        bar.innerHTML = ev.title; // Usar innerHTML para permitir ícones se necessário
+
+                        const cat = state.categories.find(c => c.id === ev.catId);
+                        bar.style.backgroundColor = cat ? cat.color : '#666';
+
+                        // Math: 31 columns fixed
+                        // const unit = 100 / 31;
+                        // bar.style.left = `calc(${(startDay - 1) * unit}% + 2px)`;
+                        // bar.style.width = `calc(${duration * unit}% - 4px)`;
+
+                        const unit = 100 / 37;
+
+                        // offset real do mês (Seg = 0)
+                        const firstWeekday =
+                            (new Date(state.year, m, 1).getDay() + 6) % 7;
+
+                        // posição visual considerando offset
+                        const visualStartCol = firstWeekday + (startDay - 1);
+
+                        bar.style.left = `calc(${visualStartCol * unit}% + 2px)`;
+                        bar.style.width = `calc(${duration * unit}% - 4px)`;
+
+                        bar.style.top = `${(slotIndex * 28) + 35}px`; // Offset aumentado por causa do dia na célula
+
+                        // Handles (somente para eventos originais ou lógica mais complexa)
+                        if (!ev.isRecurringInstance) {
+                            if (globalStart >= monthStart) {
+                                const hl = document.createElement('div'); hl.className = 'handle handle-l'; bar.appendChild(hl);
+                            }
+                            if (globalEnd <= monthEnd) {
+                                const hr = document.createElement('div'); hr.className = 'handle handle-r'; bar.appendChild(hr);
+                            }
+                        }
+
+                        bar.addEventListener('click', (e) => {
+                            e.stopPropagation(); // Evitar clique na célula
+                            if (!e.target.classList.contains('handle') && !state.drag.active) {
+                                ui.openDrawer('event', ev.id);
+                            }
+                        });
+
+                        container.appendChild(bar);
+                    });
+
+                    // Resize linha se necessário
+                    const requiredHeight = (slots.length * 28) + 45;
+                    if (requiredHeight > 80) rowEl.style.height = requiredHeight + 'px';
+                }
+            },
+
+            // --- Drawer ---
+            openDrawer(type, id = null) {
+                const d = document.getElementById('drawer');
+                const back = document.getElementById('backdrop');
+
+                // Toggle sections
+                document.querySelectorAll('.drawer-section').forEach(el => el.classList.remove('active'));
+
+                if (type === 'event') {
+                    document.getElementById('drawer-content-event').classList.add('active');
+                    document.getElementById('drawer-title').innerText = 'Novo Evento';
+
+                    // Populate Selects
+                    const catSel = document.getElementById('f-cat');
+                    catSel.innerHTML = state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+                    // Reset Inputs
+                    document.getElementById('f-id').value = '';
+                    document.getElementById('f-title').value = '';
+                    document.getElementById('f-recurrence').value = 'none';
+                    document.getElementById('f-desc').value = '';
+                    document.getElementById('btn-delete').style.display = 'none';
+
+                    if (id) {
+                        // Buscar evento (pode ser instância virtual ou real)
+                        // Se for virtual, precisamos achar o pai ou tratar como clone
+                        let ev = state.events.find(e => e.id === id);
+
+                        // Se não achou pelo ID exato, verifica se é uma instância recorrente (id_pai_rep_timestamp)
+                        if (!ev && id.includes('_rep_')) {
+                            const parentId = id.split('_rep_')[0];
+                            ev = state.events.find(e => e.id === parentId);
+                            // Preencher com as datas da ocorrência clicada, não do pai
+                            const instanceStart = id.split('_rep_')[1]; // timestamp
+                            // Isto é complexo para este demo. Vamos simplificar: abre o pai.
+                            alert("Editando a série original do evento recorrente.");
+                        }
+
+                        if (ev) {
+                            document.getElementById('drawer-title').innerText = 'Editar Evento';
+                            document.getElementById('f-id').value = ev.id;
+                            document.getElementById('f-title').value = ev.title;
+                            document.getElementById('f-start').value = ev.start;
+                            document.getElementById('f-end').value = ev.end;
+                            document.getElementById('f-cat').value = ev.catId;
+                            document.getElementById('f-recurrence').value = ev.recurrence || 'none';
+                            document.getElementById('f-desc').value = ev.description || '';
+                            document.getElementById('btn-delete').style.display = 'block';
+                        }
+                    } else {
+                        // Padrão data de hoje se não veio do clique
+                        if (!document.getElementById('f-start').value) {
+                            const today = D.format(new Date());
+                            document.getElementById('f-start').value = today;
+                            document.getElementById('f-end').value = today;
+                        }
+                    }
+
+                } else if (type === 'category') {
+                    document.getElementById('drawer-content-category').classList.add('active');
+                    document.getElementById('drawer-title').innerText = 'Gerenciar Categorias';
+                    this.renderCategoryEditorList();
+                }
+
+                d.classList.add('open');
+                back.classList.add('visible');
+            },
+
+            closeDrawer() {
+                document.getElementById('drawer').classList.remove('open');
+                document.getElementById('backdrop').classList.remove('visible');
+            }
+        };
+
+        app.init();
+    </script>
+</body>
+
+</html>
