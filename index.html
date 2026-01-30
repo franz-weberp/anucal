@@ -5,463 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AnuCal 2026 - Advanced</title>
-    <style>
-        :root {
-            --bg-deep: #0b1120;
-            --bg-main: #0f172a;
-            --bg-card: #1e293b;
-            --text-main: #f8fafc;
-            --text-dim: #64748b;
-            --accent: #38bdf8;
-            --border: #1e293b;
-            --drawer-width: 380px;
-            --month-label-width: 64px;
-            --event-height: 20px;
-            --bg-empty: #363637;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
-
-        body {
-            background: var(--bg-main);
-            color: var(--text-main);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-
-        /* --- LAYOUT --- */
-        header {
-            padding: 12px 24px;
-            background: var(--bg-deep);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            z-index: 20;
-        }
-
-        #toolbar {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            padding: 10px 24px;
-            background: var(--bg-main);
-            border-bottom: 1px solid var(--border);
-        }
-
-        #category-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 1;
-        }
-
-        #category-pills {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .pill {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            border-radius: 20px;
-            background: var(--bg-card);
-            font-size: 12px;
-            cursor: pointer;
-            border: 1px solid transparent;
-            transition: 0.2s;
-            user-select: none;
-        }
-
-        .pill.active {
-            border-color: var(--accent);
-            background: rgba(56, 189, 248, 0.1);
-        }
-
-        .pill .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-
-        .btn-icon {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-dim);
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .btn-icon:hover {
-            color: white;
-            border-color: white;
-        }
-
-        /* --- CALENDAR GRID --- */
-        #calendar-viewport {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
-            position: relative;
-            width: 100%;
-        }
-
-        .grid-header {
-            display: flex;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: var(--bg-deep);
-            border-bottom: 1px solid var(--border);
-            padding-left: var(--month-label-width);
-        }
-
-        .header-cell {
-            flex: 1;
-            height: 24px; /* Aumentado para acomodar o texto */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: var(--text-dim);
-            border-right: 1px solid #ffffff05;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        /* Círculo de destaque para o dia atual */
-        .cell-label.today {
-            background: #ef4444;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-
-        .cell-label.today strong {
-            color: white !important;
-        }
-
-        .month-row {
-            display: flex;
-            position: relative;
-            /* border-bottom: 1px solid var(--border); */
-            /* box-shadow: 0 0 1px 0 var(--border); */
-            /* box-shadow: 0 0 1px 0 white; */
-            min-height: 56px;
-            /* Aumentado para caber o dia */
-            width: 100%;
-        }
-        
-        .month-name {
-            box-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.5);
-            width: var(--month-label-width);
-            min-width: var(--month-label-width);
-            background: var(--bg-deep);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 14px;
-            color: var(--text-dim);
-            border-right: 1px solid var(--border);
-            z-index: 10;
-            user-select: none;
-        }
-
-        .days-row {
-            display: flex;
-            flex: 1;
-            position: relative;
-            /* box-shadow: inset 0 0 1px white; */
-        }
-
-        .cell {
-            flex: 1;
-            /* border-right: 1px solid #1e293b44; */
-            /* box-shadow: inset 0 0 1px rgba(0, 0, 0, 1); */
-
-            height: 100%;
-            min-height: 56px;
-            position: relative;
-            z-index: 1;
-            cursor: pointer;
-            box-shadow: inset 0.5px 0.5px 0.5px 0.5px rgba(255, 255, 255, 0.1);
-            /* Indicar clique */
-            background: #493e7185;
-        }
-
-        .cell.weekend {
-            background: rgba(0, 0, 0, 0.6);
-        }
-
-        .cell:hover {
-            background: rgba(255, 255, 255, 0.5);
-            box-shadow: inset 0 0 1px rgba(255, 0, 0, 1);
-        }
-
-        .cell:hover .cell-label strong {
-            color: rgba(255, 255, 255, 1);
-        }
-
-        /* Novo: Label do dia dentro da célula */
-        .cell-label {
-            position: absolute;
-            top: 4px;
-            left: 4px;
-            font-size: 10px;
-            color: var(--text-dim);
-            pointer-events: none;
-            /* Deixar clique passar para a célula */
-            line-height: 1;
-        }
-
-        .cell-label strong {
-            display: block;
-            font-size: 12px;
-            color: #94a3b8;
-        }
-
-        /* --- EVENTS --- */
-        .event-bar {
-            position: absolute;
-            height: var(--event-height);
-            border-radius: 4px;
-            font-size: 12px;
-            padding: 0 8px;
-            display: flex;
-            align-items: center;
-            color: white;
-            cursor: pointer;
-            z-index: 5;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            user-select: none;
-            transition: opacity 0.1s;
-        }
-
-        /* Indicador de Repetição */
-        .event-bar.is-recurring::after {
-            content: '↻';
-            position: absolute;
-            right: 4px;
-            font-size: 10px;
-            opacity: 0.7;
-        }
-
-        .event-bar:hover {
-            z-index: 50;
-            filter: brightness(1.1);
-        }
-
-        .event-bar.dragging {
-            opacity: 0.8;
-            cursor: grabbing;
-            pointer-events: none;
-            z-index: 100;
-        }
-
-        .handle {
-            position: absolute;
-            top: 0;
-            width: 10px;
-            height: 100%;
-            cursor: col-resize;
-            background: rgba(255, 255, 255, 0.0);
-            z-index: 10;
-        }
-
-        .handle:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .handle-l {
-            left: 0;
-            border-radius: 4px 0 0 4px;
-        }
-
-        .handle-r {
-            right: 0;
-            border-radius: 0 4px 4px 0;
-        }
-
-        /* --- DRAWER --- */
-        #drawer {
-            position: fixed;
-            right: -400px;
-            top: 0;
-            width: var(--drawer-width);
-            height: 100%;
-            background: var(--bg-card);
-            z-index: 2000;
-            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
-            border-left: 1px solid var(--border);
-            overflow-y: auto;
-        }
-
-        #drawer.open {
-            right: 0;
-        }
-
-        .drawer-section {
-            display: none;
-        }
-
-        .drawer-section.active {
-            display: block;
-        }
-
-        /* Forms */
-        label {
-            display: block;
-            font-size: 12px;
-            color: var(--text-dim);
-            margin-bottom: 4px;
-            margin-top: 10px;
-        }
-
-        input,
-        select,
-        textarea {
-            width: 100%;
-            padding: 10px;
-            background: var(--bg-main);
-            border: 1px solid var(--border);
-            color: white;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-
-        input:focus,
-        textarea:focus,
-        select:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        input[type="color"] {
-            height: 40px;
-            padding: 2px;
-            cursor: pointer;
-        }
-
-        .btn {
-            padding: 10px 16px;
-            border-radius: 6px;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            font-size: 13px;
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: var(--bg-deep);
-        }
-
-        .btn-primary:hover {
-            background: #0ea5e9;
-        }
-
-        .btn-ghost {
-            background: transparent;
-            color: var(--text-dim);
-            border: 1px solid var(--border);
-        }
-
-        .btn-ghost:hover {
-            color: white;
-            border-color: white;
-        }
-
-        .btn-danger {
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-
-        .btn-danger:hover {
-            background: rgba(239, 68, 68, 0.2);
-        }
-
-        /* Category List in Drawer */
-        .cat-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-            padding: 8px;
-            background: var(--bg-main);
-            border-radius: 6px;
-            border: 1px solid var(--border);
-        }
-
-        /* Backdrop */
-        #backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1999;
-            display: none;
-        }
-
-        #backdrop.visible {
-            display: block;
-        }
-
-        /* --- GHOST BAR --- */
-        .event-ghost {
-            position: absolute;
-            height: var(--event-height);
-            background: rgba(255, 255, 255, 0.1); /* Cor sutil */
-            border: 2px dashed rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
-            z-index: 2; /* Fica atrás da barra real que está sendo arrastada */
-            pointer-events: none; /* Crucial para não travar o mouse */
-            display: none; /* Escondido por padrão */
-            transition: top 0.1s ease, left 0.1s ease, width 0.1s ease;
-        }
-
-        /* Mostra apenas quando o drag está ativo */
-        body.is-dragging .event-ghost {
-            display: block;
-        }
-
-        .empty {
-            background-color: rgb(15, 23, 42);
-        }
-    </style>
+    <link href="./index.css" rel="stylesheet">
 </head>
 
 <body>
@@ -475,14 +19,21 @@
     <div id="toolbar">
         <div id="category-wrapper">
             <div id="category-pills"></div>
-            <button class="btn-icon" title="Gerenciar Categorias" onclick="ui.openDrawer('category')">⚙️</button>
+            <!-- <button class="btn-icon" title="Gerenciar Categorias" onclick="ui.openDrawer('category')">⚙️</button> -->
+            <button class="btn-icon" title="Gerenciar Categorias" id="btn-open-cat">⚙️</button>
         </div>
         
         <header>
             <h1 style="font-size: 18px;">AnuCal <span style="color:var(--text-dim)">2026</span></h1>
         </header>
 
-        <button class="btn btn-primary" onclick="ui.openDrawer('event')">+ Novo Evento</button>
+        <!-- <button class="btn btn-primary" onclick="ui.openDrawer('event')">+ Novo Evento</button> -->
+        <button class="btn btn-primary" id="btn-new-event">+ Novo Evento</button>
+        <div id="login-bar">
+            <button id="btn-login">Login com Google</button>
+            <span id="user-name"></span>
+        </div>
+
     </div>
 
     <div id="calendar-viewport">
@@ -494,8 +45,9 @@
     <div id="drawer">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <h3 id="drawer-title" style="font-size:18px">Editor</h3>
-            <button onclick="ui.closeDrawer()" class="btn-ghost"
-                style="border:none; font-size:20px; padding:4px;">&times;</button>
+            <!-- <button onclick="ui.closeDrawer()" class="btn-ghost"
+                style="border:none; font-size:20px; padding:4px;">&times;</button> -->
+            <button id="btn-close-drawer" class="btn-ghost" style="border:none; font-size:20px; padding:4px;">&times;</button>
         </div>
 
         <div id="drawer-content-event" class="drawer-section">
@@ -529,8 +81,10 @@
             <textarea id="f-desc" rows="4"></textarea>
 
             <div style="margin-top:24px; display:flex; flex-direction:column; gap:10px">
-                <button class="btn btn-primary" onclick="app.saveEvent()">Salvar Evento</button>
-                <button id="btn-delete" class="btn btn-danger" onclick="app.deleteEvent()">Excluir Evento</button>
+                <!-- <button class="btn btn-primary" onclick="app.saveEvent()">Salvar Evento</button>
+                <button id="btn-delete" class="btn btn-danger" onclick="app.deleteEvent()">Excluir Evento</button> -->
+                <button class="btn btn-primary" id="btn-save-event">Salvar Evento</button>
+                <button id="btn-delete" class="btn btn-danger">Excluir Evento</button>
             </div>
         </div>
 
@@ -546,12 +100,105 @@
             <label>Cor</label>
             <input type="color" id="cat-new-color" value="#38bdf8" style="height:40px; width:100%">
 
-            <button class="btn btn-primary" style="margin-top:15px; width:100%" onclick="app.addCategory()">Adicionar
-                Categoria</button>
+            <!-- <button class="btn btn-primary" style="margin-top:15px; width:100%" onclick="app.addCategory()">Adicionar
+                Categoria</button> -->
+                <button class="btn btn-primary" id="btn-add-cat" style="margin-top:15px; width:100%">Adicionar Categoria</button>
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            // https://console.cloud.google.com/apis/credentials?project=weber-anucal
+            apiKey: "AIzaSyDbFbIj4--ni8OoKhGglw_5kBdMI0a_Rq8",
+            authDomain: "weber-anucal.firebaseapp.com",
+            projectId: "weber-anucal",
+            storageBucket: "weber-anucal.firebasestorage.app",
+            messagingSenderId: "860793722308",
+            appId: "1:860793722308:web:57a0e9fb99944dedbbc091"
+        };
+
+        // Initialize Firebase
+        // const app = initializeApp(firebaseConfig);
+        window.firebaseApp = initializeApp(firebaseConfig);
+        window.auth = getAuth();
+        window.db = getFirestore();
+        window.GoogleAuthProvider = GoogleAuthProvider;
+        window.signInWithRedirect = signInWithRedirect;
+        window.getRedirectResult = getRedirectResult;
+        // window.signInWithPopup = signInWithPopup;
+        window.onAuthStateChanged = onAuthStateChanged;
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
+
+        document.getElementById("btn-login").addEventListener("click", loginGoogle);
+
+    
+        // async function loginGoogle() {
+        //     const provider = new GoogleAuthProvider();
+        //     const result = await signInWithPopup(auth, provider);
+        // }
+        // 1. Função de Login ajustada para Redirect
+        async function loginGoogle() {
+            try {
+                const provider = new GoogleAuthProvider();
+                // Força a seleção de conta para evitar logins automáticos indesejados
+                provider.setCustomParameters({ prompt: 'select_account' });
+                await signInWithRedirect(auth, provider);
+            } catch (error) {
+                console.error("Erro ao iniciar login:", error);
+            }
+        }
+
+        // 2. Observador de estado robusto
+        onAuthStateChanged(auth, async (user) => {
+            // Verifica se houve um resultado de redirecionamento (caso o usuário tenha acabado de voltar do Google)
+            const result = await getRedirectResult(auth);
+
+            // Se não há usuário logado agora e nem resultado de redirecionamento, encerra.
+            if (!user && !result?.user) return;
+
+            // Garante que temos a instância correta do usuário
+            const currentUser = user || result.user;
+
+            // Atualiza a UI
+            document.getElementById('user-name').innerText = currentUser.displayName;
+            document.getElementById('btn-login').style.display = 'none'; // Esconde botão após login
+
+            // Lógica do Firestore
+            const ref = doc(db, "users", currentUser.uid);
+            const snap = await getDoc(ref);
+
+            if (snap.exists()) {
+                // CARREGA DO BANCO
+                Object.assign(state, snap.data().state);
+                ui.renderData();
+            } else {
+                // PRIMEIRO LOGIN → SALVA DEFAULT
+                await setDoc(ref, { state: state });
+                ui.renderData(); // Renderiza mesmo se for novo
+            }
+        });
+
+        async function saveState() {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const ref = doc(db, "users", user.uid);
+            await setDoc(ref, {
+                state: state
+            });
+        }
+
+
+
+
         // --- 1. STATE & DATA ---
         const state = {
             year: 2026,
@@ -661,6 +308,32 @@
                 this.setupDragDrop();
             },
 
+            bindEvents() {
+                // Toolbar e Gerais
+                document.getElementById('btn-new-event').addEventListener('click', () => ui.openDrawer('event'));
+                document.getElementById('btn-open-cat').addEventListener('click', () => ui.openDrawer('category'));
+                document.getElementById('btn-close-drawer').addEventListener('click', () => ui.closeDrawer());
+                document.getElementById('backdrop').addEventListener('click', () => ui.closeDrawer());
+
+                // Ações de Eventos
+                document.getElementById('btn-save-event').addEventListener('click', () => this.saveEvent());
+                document.getElementById('btn-delete').addEventListener('click', () => this.deleteEvent());
+
+                // Ações de Categorias
+                document.getElementById('btn-add-cat').addEventListener('click', () => this.addCategory());
+
+                // Eventos Delegados (para itens criados dinamicamente como Pills e Botões Excluir Cat)
+                // Como esses itens são renderizados várias vezes, usamos delegação de evento no container pai
+
+                document.getElementById('category-pills').addEventListener('click', (e) => {
+                    const pill = e.target.closest('.pill');
+                    if (pill) {
+                        const id = state.categories[Array.from(pill.parentNode.children).indexOf(pill)].id; // ou use data-id
+                        // Melhor prática: adicionar data-id no renderPills e ler aqui
+                    }
+                });
+            },
+
             // --- Categories ---
             addCategory() {
                 const name = document.getElementById('cat-new-name').value;
@@ -676,6 +349,7 @@
                 ui.renderCategoryEditorList(); // Atualizar lista no editor
                 ui.renderPills(); // Atualizar toolbar
                 ui.renderEvents(); // Atualizar cores eventos
+                saveState();
             },
 
             deleteCategory(id) {
@@ -684,6 +358,7 @@
                     ui.renderCategoryEditorList();
                     ui.renderPills();
                     ui.renderEvents();
+                    saveState();
                 }
             },
 
@@ -691,6 +366,7 @@
                 const cat = state.categories.find(c => c.id === id);
                 if (cat) cat.active = !cat.active;
                 ui.renderData();
+                saveState();
             },
 
             // --- Events ---
@@ -724,6 +400,7 @@
                 }
                 ui.closeDrawer();
                 ui.renderData();
+                saveState();
             },
 
             deleteEvent() {
@@ -740,6 +417,7 @@
                 state.events = state.events.filter(e => e.id !== id);
                 ui.closeDrawer();
                 ui.renderData();
+                saveState();
             },
 
             handleCellClick(dateStr) {
@@ -789,6 +467,7 @@
                         });
                     }
                 });
+                saveState();
                 return expanded;
             },
 
@@ -823,36 +502,6 @@
                     }
                 });
 
-                // window.addEventListener('mousemove', e => {
-                //     if (
-                //         Math.abs(e.clientX - state.drag.startX) > 3 ||
-                //         Math.abs(e.clientY - state.drag.startY) > 3
-                //     ) {
-                //         state.drag.moved = true;
-                //     }
-
-
-                //     if (!state.drag.active) return;
-                //     e.preventDefault();
-                //     const currentMouseDate = Grid.getDateFromPoint(e.clientX, e.clientY);
-                //     if (!currentMouseDate) return;
-
-                //     const ev = state.events.find(e => e.id === state.drag.eventId);
-
-                //     if (state.drag.type === 'move') {
-                //         const duration = D.diffDays(state.drag.origStart, state.drag.origEnd);
-                //         let newStart = currentMouseDate;
-                //         const newEnd = D.addDays(newStart, duration);
-                //         ev.start = D.format(newStart);
-                //         ev.end = D.format(newEnd);
-                //     } else if (state.drag.type === 'resize-l') {
-                //         if (currentMouseDate <= state.drag.origEnd) ev.start = D.format(currentMouseDate);
-                //     } else if (state.drag.type === 'resize-r') {
-                //         if (currentMouseDate >= state.drag.origStart) ev.end = D.format(currentMouseDate);
-                //     }
-
-                //     requestAnimationFrame(() => ui.renderEvents());
-                // });
                 window.addEventListener('mousemove', e => {
                     if (Math.abs(e.clientX - state.drag.startX) > 3 || Math.abs(e.clientY - state.drag.startY) > 3) {
                         state.drag.moved = true;
@@ -914,36 +563,13 @@
                     requestAnimationFrame(() => ui.renderEvents());
                 });
 
-                // window.addEventListener('mouseup', () => {
-                //     if (state.drag.active && !state.drag.moved) {
-                //         ui.openDrawer('event', state.drag.eventId);
-                //     }
-
-                //     if (state.drag.active) {
-                //         // --- INÍCIO DA ALTERAÇÃO MINIMALISTA ---
-                //         // Move o evento arrastado para o topo do array para ele ganhar prioridade visual
-                //         const idx = state.events.findIndex(e => e.id === state.drag.eventId);
-                //         if (idx > -1) {
-                //             const [movedEvent] = state.events.splice(idx, 1);
-                //             state.events.unshift(movedEvent);
-                //         }
-                //         // --- FIM DA ALTERAÇÃO ---
-
-                //         state.drag.active = false;
-                //         document.body.style.cursor = 'default';
-                //         ui.renderEvents();
-                //     }
-                // });
                 window.addEventListener('mouseup', () => {
                     if (state.drag.active && !state.drag.moved) {
                         ui.openDrawer('event', state.drag.eventId);
                     }
 
                     if (state.drag.active) {
-                        // --- REMOVIDO: O unshift que forçava o evento para o topo ---
-                        // A lógica de reordenação agora acontece em tempo real no mousemove
-                        // e permanece no array state.events conforme você move.
-
+                     
                         state.drag.active = false;
                         document.body.style.cursor = 'default';
 
@@ -1133,6 +759,8 @@
                     const requiredHeight = (slots.length * 28) + 45;
                     if (requiredHeight > 80) rowEl.style.height = requiredHeight + 'px';
                 }
+
+                saveState();
             },
 
             // --- Drawer ---
@@ -1208,6 +836,10 @@
                 document.getElementById('backdrop').classList.remove('visible');
             }
         };
+
+        window.app = app;
+        window.ui = ui;
+        window.loginGoogle = loginGoogle;
 
         app.init();
     </script>

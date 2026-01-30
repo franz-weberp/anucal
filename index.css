@@ -1,0 +1,460 @@
+:root {
+    --bg-deep: #0b1120;
+    --bg-main: #0f172a;
+    --bg-card: #1e293b;
+    --text-main: #f8fafc;
+    --text-dim: #64748b;
+    --accent: #38bdf8;
+    --border: #1e293b;
+    --drawer-width: 380px;
+    --month-label-width: 64px;
+    --event-height: 20px;
+    --bg-empty: #363637;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+    background: var(--bg-main);
+    color: var(--text-main);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* --- LAYOUT --- */
+header {
+    padding: 12px 24px;
+    background: var(--bg-deep);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    z-index: 20;
+}
+
+#toolbar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 10px 24px;
+    background: var(--bg-main);
+    border-bottom: 1px solid var(--border);
+}
+
+#category-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+#category-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: var(--bg-card);
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: 0.2s;
+    user-select: none;
+}
+
+.pill.active {
+    border-color: var(--accent);
+    background: rgba(56, 189, 248, 0.1);
+}
+
+.pill .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.btn-icon {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-icon:hover {
+    color: white;
+    border-color: white;
+}
+
+/* --- CALENDAR GRID --- */
+#calendar-viewport {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    width: 100%;
+}
+
+.grid-header {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg-deep);
+    border-bottom: 1px solid var(--border);
+    padding-left: var(--month-label-width);
+}
+
+.header-cell {
+    flex: 1;
+    height: 24px;
+    /* Aumentado para acomodar o texto */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--text-dim);
+    border-right: 1px solid #ffffff05;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+/* Círculo de destaque para o dia atual */
+.cell-label.today {
+    background: #ef4444;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.cell-label.today strong {
+    color: white !important;
+}
+
+.month-row {
+    display: flex;
+    position: relative;
+    /* border-bottom: 1px solid var(--border); */
+    /* box-shadow: 0 0 1px 0 var(--border); */
+    /* box-shadow: 0 0 1px 0 white; */
+    min-height: 56px;
+    /* Aumentado para caber o dia */
+    width: 100%;
+}
+
+.month-name {
+    box-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.5);
+    width: var(--month-label-width);
+    min-width: var(--month-label-width);
+    background: var(--bg-deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-dim);
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    user-select: none;
+}
+
+.days-row {
+    display: flex;
+    flex: 1;
+    position: relative;
+    /* box-shadow: inset 0 0 1px white; */
+}
+
+.cell {
+    flex: 1;
+    /* border-right: 1px solid #1e293b44; */
+    /* box-shadow: inset 0 0 1px rgba(0, 0, 0, 1); */
+
+    height: 100%;
+    min-height: 56px;
+    position: relative;
+    z-index: 1;
+    cursor: pointer;
+    box-shadow: inset 0.5px 0.5px 0.5px 0.5px rgba(255, 255, 255, 0.1);
+    /* Indicar clique */
+    background: #493e7185;
+}
+
+.cell.weekend {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.cell:hover {
+    background: rgba(255, 255, 255, 0.5);
+    box-shadow: inset 0 0 1px rgba(255, 0, 0, 1);
+}
+
+.cell:hover .cell-label strong {
+    color: rgba(255, 255, 255, 1);
+}
+
+/* Novo: Label do dia dentro da célula */
+.cell-label {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    font-size: 10px;
+    color: var(--text-dim);
+    pointer-events: none;
+    /* Deixar clique passar para a célula */
+    line-height: 1;
+}
+
+.cell-label strong {
+    display: block;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* --- EVENTS --- */
+.event-bar {
+    position: absolute;
+    height: var(--event-height);
+    border-radius: 4px;
+    font-size: 12px;
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    color: white;
+    cursor: pointer;
+    z-index: 5;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+    transition: opacity 0.1s;
+}
+
+/* Indicador de Repetição */
+.event-bar.is-recurring::after {
+    content: '↻';
+    position: absolute;
+    right: 4px;
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+.event-bar:hover {
+    z-index: 50;
+    filter: brightness(1.1);
+}
+
+.event-bar.dragging {
+    opacity: 0.8;
+    cursor: grabbing;
+    pointer-events: none;
+    z-index: 100;
+}
+
+.handle {
+    position: absolute;
+    top: 0;
+    width: 10px;
+    height: 100%;
+    cursor: col-resize;
+    background: rgba(255, 255, 255, 0.0);
+    z-index: 10;
+}
+
+.handle:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.handle-l {
+    left: 0;
+    border-radius: 4px 0 0 4px;
+}
+
+.handle-r {
+    right: 0;
+    border-radius: 0 4px 4px 0;
+}
+
+/* --- DRAWER --- */
+#drawer {
+    position: fixed;
+    right: -400px;
+    top: 0;
+    width: var(--drawer-width);
+    height: 100%;
+    background: var(--bg-card);
+    z-index: 2000;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+}
+
+#drawer.open {
+    right: 0;
+}
+
+.drawer-section {
+    display: none;
+}
+
+.drawer-section.active {
+    display: block;
+}
+
+/* Forms */
+label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    margin-top: 10px;
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    padding: 10px;
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    color: white;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+input[type="color"] {
+    height: 40px;
+    padding: 2px;
+    cursor: pointer;
+}
+
+.btn {
+    padding: 10px 16px;
+    border-radius: 6px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 13px;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: var(--bg-deep);
+}
+
+.btn-primary:hover {
+    background: #0ea5e9;
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+    color: white;
+    border-color: white;
+}
+
+.btn-danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+/* Category List in Drawer */
+.cat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 8px;
+    background: var(--bg-main);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+/* Backdrop */
+#backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1999;
+    display: none;
+}
+
+#backdrop.visible {
+    display: block;
+}
+
+/* --- GHOST BAR --- */
+.event-ghost {
+    position: absolute;
+    height: var(--event-height);
+    background: rgba(255, 255, 255, 0.1);
+    /* Cor sutil */
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    z-index: 2;
+    /* Fica atrás da barra real que está sendo arrastada */
+    pointer-events: none;
+    /* Crucial para não travar o mouse */
+    display: none;
+    /* Escondido por padrão */
+    transition: top 0.1s ease, left 0.1s ease, width 0.1s ease;
+}
+
+/* Mostra apenas quando o drag está ativo */
+body.is-dragging .event-ghost {
+    display: block;
+}
+
+.empty {
+    background-color: rgb(15, 23, 42);
+}
